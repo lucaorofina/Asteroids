@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Asteroids</title>
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"
+            width="700"
+            height="500">
+    </canvas>
+
+    <script>
+
+        const FPS = 30;
+        const SHIP_SIZE = 30; //height of ship in px
+        const TURN_SPEED = 360; //turn in degrees p second
+        const SHIP_THRUST = 5; //acc of ship in px/second
+
+        var canv = document.getElementById('gameCanvas');
+        var ctx = canv.getContext('2d');
+
+        var ship = {
+            x: canv.width/2,
+            y: canv.height/2,
+            r: SHIP_SIZE,
+            a: 155/(180*Math.PI), //90 degrees in radians
+            rot: 0, //rotation
+            thrusting: false,
+            thrust:{
+                x:0,
+                y:0
+            }
+
+        }
+        //event listeners
+        document.addEventListener('keydown',keyDown);
+        document.addEventListener('keyup',keyUp);
+
+
+        //game loop setup
+        setInterval(update, 1000 / FPS);
+
+        function keyDown(/** @type {keyboardEvent} */ ev){
+            switch(ev.keyCode){
+                case 37: //left arrow(rotates ship left)
+                    ship.rot = TURN_SPEED/((180*Math.PI)/FPS);
+                    break;
+                case 38: //up arrow(rotates ship fwd)
+                    ship.thrust = true;
+                    break;
+                case 39: //right arrow(rotates ship right)
+                    ship.rot = -TURN_SPEED/((180*Math.PI)/FPS);
+                    break;
+            }
+        }
+        function keyUp(/** @type {keyboardEvent} */ ev){
+            switch(ev.keyCode){
+                case 37: //left arrow(stop rotates ship left)
+                    ship.rot = 0;
+                    break;
+                case 38: //up arrow(stop rotates ship fwd)
+                    ship.thrust=false;
+                    break;
+                case 39: //right arrow(stop rotates ship right)
+                    ship.rot = 0;
+                    break;
+            }
+        }
+        function update(){
+            //draw space
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0,0,canv.width, canv.height);
+
+            //thruust
+            if(ship.thrusting){
+                ship.thrust.x += SHIP_THRUST*(math.cos(ship.a)),
+                ship.thrust.y -= SHIP_THRUST*(math.cos(ship.a))
+            }
+        
+            //draw ship TRIANGLE
+            ctx.strokeStyle = 'white',
+            ctx.lineWidth = SHIP_SIZE/20;
+            ctx.beginPath();
+
+            ctx.moveTo(//ship head
+                ship.x + (4/3)*ship.r * Math.cos(ship.a),
+                ship.y - (4/3)*ship.r * Math.cos(ship.a)
+            );
+            //backleft
+            ctx.lineTo(
+                ship.x- ship.r * ((2/3)*Math.cos(ship.a)) +Math.sin(ship.a),
+                ship.y+ ship.r * ((2/3)*Math.sin(ship.a)) - Math.cos(ship.a)
+            );
+            ctx.lineTo(//backright
+                ship.x- ship.r * ((2/3)*Math.cos(ship.a) - Math.sin(ship.a)),
+                ship.y+ ship.r * ((2/3)*Math.sin(ship.a) + Math.cos(ship.a))
+            );
+            ctx.closePath();
+            ctx.stroke();
+
+            //rotate ship
+            ship.a += ship.rot;
+
+            //move ship
+            ship.x += ship.thrust.x;
+            
+
+            //center dot
+            ctx.fillStyle = 'red';
+            ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+        }
+    
+
+    
+    </script>
+
+</body>
+
+</html>
