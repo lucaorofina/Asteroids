@@ -17,107 +17,296 @@
 
     <script>
 
-        const FPS = 30;
-        const SHIP_SIZE = 30; //height of ship in px
-        const TURN_SPEED = 360; //turn in degrees p second
-        const SHIP_THRUST = 5; //acc of ship in px/second
+        const FPS = 20;
+        const FRICTION = 0.05; // friction coefficient of space (0 = no friction, 
+        //1 = lots of friction)
 
+        //asteroid
+        const ASTEROID_NUM = 3;
+        const ASTEROID_SIZE = 100;//size in px
+        const ASTEROID_SPD = 50; //max start speed, px/s
+        const ASTEROID_VERT=10; //    NUMBER OF VERTICE ON ASTEROID
+
+        //ship
+        const SHIP_SIZE = 30; //height of ship in px
+        const TURN_SPEED = 760; //turn in degrees p second
+        const SHIP_THRUST = 99; //accelrtn of ship in px/second
+        var isLargerSize = true;
+        /** @type {HTMLCanvasElement} */
         var canv = document.getElementById('gameCanvas');
         var ctx = canv.getContext('2d');
 
+        //spaceship object
         var ship = {
             x: canv.width /2,
             y: canv.height/2,
             r: SHIP_SIZE/2,
-            a: 90/ (180 * Math.PI), //90 degrees in radians
+            a: 90 / (180 * Math.PI), //90 degrees in radians
             rot: 0, //rotation
             thrusting: false,
-            thrust:{
+            thrust: { //cont in the direction, even if key releases
                 x:0,
                 y:0
-            }
-
+            },
+            // Add velocity properties for the ship
+            vx: 0,
+            vy: 0,
+            // Add maximum speed for the ship
+            maxSpeed: 5
         }
+
+        //asteroids
+        var asteroids = [];
+        createAsteroidBelt();
+
         //event listeners
         document.addEventListener('keydown',keyDown);
         document.addEventListener('keyup',keyUp);
 
-
         //game loop setup
         setInterval(update, 1000 / FPS);
 
-        function keyDown(/** @type {keyboardEvent} */ ev){
-            switch(ev.keyCode){
-                case 37: //left arrow(rotates ship left)
-                    ship.rot = TURN_SPEED/((180*Math.PI)/FPS);
-                    break;
-                case 38: //up arrow(rotates ship fwd)
-                    ship.thrust = true;
-                    break;
-                case 39: //right arrow(rotates ship right)
-                    ship.rot = -TURN_SPEED/((180*Math.PI)/FPS);
-                    break;
+        function createAsteroidBelt(){
+            asteroids = []; //clear array
+            var x, y;
+            for (var i = 0; i< ASTEROID_NUM; i++){
+                do{
+                    x = Math.floor(Math.random() *canv.width);
+                    y = Math.floor(Math.random() *canv.height);
+                } while(distBtwnPts(ship.x, ship.y, x, y) < ASTEROID_SIZE*2 +ship.r);
+                asteroids.push(newAsteroid(x,y)); 
             }
         }
-        function keyUp(/** @type {keyboardEvent} */ ev){
+
+        function distBtwnPts(x1, y1, x2, y2){
+            return Math.sqrt(Math.pow(x2-x1, 2)+ Math.pow(y1,y2,2));
+        }
+
+        
+        //controls
+        function keyDown(/** @type {KeyboardEvent} */ ev){ 
+            switch(ev.keyCode){
+                case 37: //left arrow(rotates ship left)
+                    ship.rot = TURN_SPEED/(180*Math.PI)/FPS;
+                    break;
+                case 38: //up arrow(rotates ship fwd)
+                    ship.thrusting = true;
+                    break;
+                case 39: //right arrow(rotates ship right)
+                    ship.rot = -TURN_SPEED/(180*Math.PI)/FPS;
+                    break;
+                case 40: //down arrow
+                    ship.thrustingReverse = true;
+                    break;
+                 
+            }
+        }
+
+        function keyUp(/** @type {KeyboardEvent} */ ev){
             switch(ev.keyCode){
                 case 37: //left arrow(stop rotates ship left)
                     ship.rot = 0;
                     break;
                 case 38: //up arrow(stop rotates ship fwd)
-                    ship.thrust=false;
+                    ship.thrusting=false;
                     break;
                 case 39: //right arrow(stop rotates ship right)
                     ship.rot = 0;
                     break;
+                case 40: //down arrow
+                    ship.thrustingReverse=false;
+                    break;
+               
             }
         }
+        function newAsteroid(x,y){ //location of asterid
+            var asteroid ={
+                x: x,
+                y: y,
+                r: ASTEROID_SIZE/2, //radius
+                a: Math.random()*Math.PI *2, //angle in radians
+                vertice: Math.floor(Math.random()* (ASTEROID_VERT+1)+(ASTEROID_VERT/2 )),
+            //velocity, random * speed * random direction
+                //(if mathrandom is less than .5 then multiply by one, else mult by -1)
+                xv: Math.random()* ASTEROID_SPD /FPS* (Math.random()<.5 ? 1 : -1),
+                yv: Math.random()* ASTEROID_SPD /FPS* (Math.random()<.5 ? 1 : -1)
+             };
+            
+            return asteroid;
+        }
+
+        //style functions 
+        function createStars() { //background of stars
+            ctx.fillStyle = 'white';
+            for (var i = 0; i < 4; i++) { // Adjust the number of stars as needed
+                var x = Math.random() * canv.width;
+                var y = Math.random() * canv.height;
+                ctx.fillRect(x, y, 1, 1); // Draw a small dot representing a star
+            }
+        }
+        
         function update(){
+            ctx.clearRect(0, 0, canv.width, canv.height);
             //draw space
+            
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canv.width, canv.height);
-
+            createStars();
+           
             //thruust
             if(ship.thrusting){
-                ship.thrust.x += SHIP_THRUST*(math.cos(ship.a)),
-                ship.thrust.y -= SHIP_THRUST*(math.cos(ship.a))
-            }
-        
-            //draw ship TRIANGLE
-            ctx.strokeStyle = 'white',
-            ctx.lineWidth = SHIP_SIZE/20;
-            ctx.beginPath();
+                //ship.thrust.x += (SHIP_THRUST*(math.cos(ship.a)))/ FPS, //
+               // ship.thrust.y += (SHIP_THRUST*(math.sin(ship.a)))/FPS
+            
+                var vx = -SHIP_THRUST * Math.cos(ship.a)/FPS ;
+                var vy = -SHIP_THRUST * Math.sin(ship.a)/FPS ;
 
-            ctx.moveTo(//ship head
-                ship.x + (((4/3)*ship.r) * Math.cos(ship.a)),
-                ship.y - (((4/3)*ship.r) * Math.cos(ship.a))
+                // Update ship position
+                ship.x -= vx;
+                ship.y += vy;
+
+                //draw ship thrust
+                
+            ctx.fillStyle = 'cyan';
+                ctx.strokeStyle = 'yellow',
+                
+                // Define a flag to toggle between larger and smaller size
+                
+
+                // Draw ship thrust
+                ctx.fillStyle = 'cyan';
+                ctx.strokeStyle = 'yellow';
+
+                // Determine the line width based on the flag
+                if (isLargerSize) {
+                    ctx.lineWidth = SHIP_SIZE / 5; // Larger size
+                } else {
+                    ctx.lineWidth = SHIP_SIZE / 10; // Smaller size
+                }
+                ctx.beginPath();
+
+                ctx.moveTo(// MOVE TO rear left
+                    ship.x - ship.r * (2 / 3 * Math.cos(ship.a) + 0.5 * Math.sin(ship.a)),
+                    ship.y + ship.r * (2 / 3 * Math.sin(ship.a) - 0.5 * Math.cos(ship.a))
+                );
+                ctx.lineTo( // rear centre (behind the ship)
+                    ship.x - ship.r * 5 / 3 * Math.cos(ship.a),
+                    ship.y + ship.r * 5 / 3 * Math.sin(ship.a)
+                );
+                ctx.lineTo( // rear right
+                    ship.x - ship.r * (2 / 3 * Math.cos(ship.a) - 0.5 * Math.sin(ship.a)),
+                    ship.y + ship.r * (2 / 3 * Math.sin(ship.a) + 0.5 * Math.cos(ship.a))
+                );
+                
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                
+                isLargerSize = !isLargerSize;
+            }else {
+                // apply friction (slow the ship down when not thrusting)
+                ship.thrust.x -= FRICTION * ship.thrust.x / FPS;
+                ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
+            
+                ship.vx *= FRICTION;
+                ship.vy *= FRICTION; 
+            }
+            if (ship.thrustingReverse) {
+        // Calculate acceleration components in the opposite direction of ship angle
+                var vx = SHIP_THRUST/ FPS * Math.cos(ship.a) ;
+                var vy = SHIP_THRUST/ FPS * Math.sin(ship.a) ;
+
+                // Update ship position
+                ship.x -= vx;
+                ship.y += vy;
+            }
+            
+
+            
+            
+            // draw the triangular ship
+            
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = SHIP_SIZE / 20;
+            ctx.beginPath();
+            ctx.moveTo( // head of the ship
+                ship.x + 4/3 * ship.r * Math.cos(ship.a),
+                ship.y - 4/3 * ship.r * Math.sin(ship.a)
             );
-            //backleft 
-            /**
-            ctx.lineTo(
-                (ship.x - ship.r) * (((2/3)*Math.cos(ship.a)) + Math.sin(ship.a)),
-                (ship.y + ship.r) * (((2/3)*Math.sin(ship.a)) - Math.cos(ship.a))
+            ctx.lineTo( // rear left
+                ship.x - ship.r * (2/3 * Math.cos(ship.a) + Math.sin(ship.a)),
+                ship.y + ship.r * (2/3 * Math.sin(ship.a) - Math.cos(ship.a))
             );
-            ctx.lineTo(//backright
-                (ship.x- ship.r) * ((2/3)*Math.cos(ship.a) - Math.sin(ship.a)),
-                (ship.y+ ship.r) * ((2/3)*Math.sin(ship.a) + Math.cos(ship.a))
-            );**/
+            ctx.lineTo( // rear right
+                ship.x - ship.r * (2/3 * Math.cos(ship.a) - Math.sin(ship.a)),
+                ship.y + ship.r * (2/3 * Math.sin(ship.a) + Math.cos(ship.a))
+            );
             ctx.closePath();
-            ctx.stroke();
+            ctx.stroke(); 
+            
+
+            //draw asteroid
+            ctx.strokeStyle = 'indigo';
+            ctx.lineWidth= SHIP_SIZE/20;
+            var x,y,r,a,vertice;
+            for(var i = 0; i<asteroids.length; i++){
+                x= asteroids[i].x;
+                y= asteroids[i].y;
+                r= asteroids[i].r;
+                a= asteroids[i].a;
+                vertice= asteroids[i].vertice;
+
+                //draw path
+                ctx.beginPath();
+                ctx.moveTo(
+                    x +r *Math.cos(a),
+                    y +r *Math.sin(a) 
+                );
+
+                //draw shape
+                for(var j=1; j<vertice; j++){
+                    ctx.lineTo( //line to each side of polygon
+                        x + r*Math.cos(a+j*(Math.PI*2 )/vertice),
+                        y + r*Math.sin(a+j*(Math.PI*2 )/vertice)
+                    );
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                //move
+
+                //edge of screen
+            }
 
             //rotate ship
             ship.a += ship.rot;
 
+            // Update ship position based on velocity
+            ship.x += ship.vx;
+            ship.y += ship.vy;
+
             //move ship
-            ship.x += ship.thrust.x;
+            ship.x += ship.thrust.x/FPS;
+            ship.y += ship.thrust.y/FPS;
             
+            //boundaries edge of screen
+            if (ship.x < 0 - ship.r) {
+                ship.x = canv.width + ship.r;
+            } else if (ship.x > canv.width + ship.r) {
+                ship.x = 0 - ship.r;
+            }
+            if (ship.y < 0 - ship.r) {
+                ship.y = canv.height + ship.r;
+            } else if (ship.y > canv.height + ship.r) {
+                ship.y = 0 - ship.r;
+            }
 
             //center dot
             ctx.fillStyle = 'red';
             ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+            
         }
-    
-
     
     </script>
 
