@@ -24,19 +24,22 @@
         //asteroid
         const ASTEROID_NUM = 3;
         const ASTEROID_SIZE = 100;//size in px
-        const ASTEROID_SPD = 50; //max start speed, px/s
-        const ASTEROID_VERT=10; //    NUMBER OF VERTICE ON ASTEROID
-
+        const ASTEROID_SPD = 60; //max start speed, px/s
+        const ASTEROID_VERT=15; //    NUMBER OF VERTICE ON ASTEROID
+        const ASTEROID_SHARP = .3 //makes asteroid asymetric ( 0= none, 1 = many)
+        
         //ship
         const SHIP_SIZE = 30; //height of ship in px
         const TURN_SPEED = 760; //turn in degrees p second
         const SHIP_THRUST = 99; //accelrtn of ship in px/second
         var isLargerSize = true;
+        const showRedDot = 'false';
+        const showBound = 'true'; //show collision bound
         /** @type {HTMLCanvasElement} */
         var canv = document.getElementById('gameCanvas');
         var ctx = canv.getContext('2d');
 
-        //spaceship object
+        //ship object
         var ship = {
             x: canv.width /2,
             y: canv.height/2,
@@ -68,21 +71,29 @@
 
         function createAsteroidBelt(){
             asteroids = []; //clear array
-            var x, y;
+            var xAst, yAst;
             for (var i = 0; i< ASTEROID_NUM; i++){
-                do{
-                    x = Math.floor(Math.random() *canv.width);
-                    y = Math.floor(Math.random() *canv.height);
-                } while(distBtwnPts(ship.x, ship.y, x, y) < ASTEROID_SIZE*2 +ship.r);
-                asteroids.push(newAsteroid(x,y)); 
+                do {
+                    xAst = Math.floor(Math.random() *canv.width);
+                    yAst = Math.floor(Math.random() *canv.height);
+                    const distance = distBtwnPts(ship.x, ship.y, xAst, yAst);
+
+                } while(!isSafeSpawnPosition(xAst, yAst, ((ASTEROID_SIZE*2) + ship.r)))
+                asteroids.push(newAsteroid(xAst,yAst)); 
             }
         }
 
         function distBtwnPts(x1, y1, x2, y2){
-            return Math.sqrt(Math.pow(x2-x1, 2)+ Math.pow(y1,y2,2));
+            return Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2,y1,2));
         }
 
-        
+        // Function to check if asteroid spawn position is safe
+        function isSafeSpawnPosition(xAst, yAst, minSafeDistance) {
+            // Calculate distance between ship and potential asteroid spawn position
+            const distance = distBtwnPts(ship.x, ship.y, xAst, yAst);
+            // Check if distance is greater than minimum safe distance
+            return distance >= minSafeDistance;
+        }
         //controls
         function keyDown(/** @type {KeyboardEvent} */ ev){ 
             switch(ev.keyCode){
@@ -119,6 +130,7 @@
                
             }
         }
+
         function newAsteroid(x,y){ //location of asterid
             var asteroid ={
                 x: x,
@@ -129,9 +141,14 @@
             //velocity, random * speed * random direction
                 //(if mathrandom is less than .5 then multiply by one, else mult by -1)
                 xv: Math.random()* ASTEROID_SPD /FPS* (Math.random()<.5 ? 1 : -1),
-                yv: Math.random()* ASTEROID_SPD /FPS* (Math.random()<.5 ? 1 : -1)
+                yv: Math.random()* ASTEROID_SPD /FPS* (Math.random()<.5 ? 1 : -1),
+                offset: [],
              };
-            
+            //create offset array
+            for (var i = 0; i<ASTEROID_VERT; i++){
+                //
+                asteroid.offset.push((Math.random()*ASTEROID_SHARP*2) +(1-ASTEROID_SHARP));
+            }
             return asteroid;
         }
 
@@ -165,14 +182,7 @@
                 ship.x -= vx;
                 ship.y += vy;
 
-                //draw ship thrust
-                
-            ctx.fillStyle = 'cyan';
-                ctx.strokeStyle = 'yellow',
-                
                 // Define a flag to toggle between larger and smaller size
-                
-
                 // Draw ship thrust
                 ctx.fillStyle = 'cyan';
                 ctx.strokeStyle = 'yellow';
@@ -204,7 +214,7 @@
 
                 
                 isLargerSize = !isLargerSize;
-            }else {
+            } else {
                 // apply friction (slow the ship down when not thrusting)
                 ship.thrust.x -= FRICTION * ship.thrust.x / FPS;
                 ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
@@ -212,6 +222,7 @@
                 ship.vx *= FRICTION;
                 ship.vy *= FRICTION; 
             }
+
             if (ship.thrustingReverse) {
         // Calculate acceleration components in the opposite direction of ship angle
                 var vx = SHIP_THRUST/ FPS * Math.cos(ship.a) ;
@@ -222,11 +233,7 @@
                 ship.y += vy;
             }
             
-
-            
-            
             // draw the triangular ship
-            
             ctx.strokeStyle = "white";
             ctx.lineWidth = SHIP_SIZE / 20;
             ctx.beginPath();
@@ -245,40 +252,67 @@
             ctx.closePath();
             ctx.stroke(); 
             
-
+            if(showBound =='true'){
+                ctx.strokeStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(ship.x, ship.y, ship.r, 0, Math.PI*2, false);
+                ctx.stroke();
+            }
+            
             //draw asteroid
-            ctx.strokeStyle = 'indigo';
+            
             ctx.lineWidth= SHIP_SIZE/20;
-            var x,y,r,a,vertice;
+            var x,y,r,a,vertice, offset;
             for(var i = 0; i<asteroids.length; i++){
                 x= asteroids[i].x;
                 y= asteroids[i].y;
                 r= asteroids[i].r;
                 a= asteroids[i].a;
-                vertice= asteroids[i].vertice;
-
+                vertice = asteroids[i].vertice;
+                offset = asteroids[i].offset;
+                
                 //draw path
+                ctx.strokeStyle = 'indigo';
                 ctx.beginPath();
                 ctx.moveTo(
-                    x +r *Math.cos(a),
-                    y +r *Math.sin(a) 
+                    x +r * offset[0] * Math.cos(a),
+                    y +r * offset[0] * Math.sin(a) 
                 );
 
                 //draw shape
                 for(var j=1; j<vertice; j++){
                     ctx.lineTo( //line to each side of polygon
-                        x + r*Math.cos(a+j*(Math.PI*2 )/vertice),
-                        y + r*Math.sin(a+j*(Math.PI*2 )/vertice)
+                        x + r * offset[j] * Math.cos(a+j*(Math.PI*2 )/vertice),
+                        y + r * offset[j] * Math.sin(a+j*(Math.PI*2 )/vertice)
                     );
                 }
                 ctx.closePath();
                 ctx.stroke();
+                if(showBound =='true'){
+                    ctx.strokeStyle = 'yellow';
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI*2, false);
+                    ctx.stroke();
+                }
 
                 //move
-
+                asteroids[i].x += asteroids[i].xv ;
+                asteroids[i].y += asteroids[i].yv;
+               
                 //edge of screen
-            }
+                if (asteroids[i].x < (0-asteroids[i].r)){
+                    asteroids[i].x = canv.width + asteroids[i].r;
+                } else if(asteroids[i].x > canv.width+asteroids[i].r){
+                    asteroids[i].x = 0 -asteroids[i].r; 
+                }
 
+                if (asteroids[i].y < 0-asteroids[i].r){
+                    asteroids[i].y = canv.height +asteroids[i].r;
+                } else if(asteroids[i].y > canv.height+asteroids[i].r){
+                    asteroids[i].y = 0 - asteroids[i].r; 
+                }
+            }
+            
             //rotate ship
             ship.a += ship.rot;
 
@@ -302,10 +336,10 @@
                 ship.y = 0 - ship.r;
             }
 
-            //center dot
-            ctx.fillStyle = 'red';
-            ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
-            
+            if(showRedDot=='true'){
+                ctx.fillStyle = 'red';
+                ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+            }
         }
     
     </script>
