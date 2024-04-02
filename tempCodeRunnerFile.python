@@ -1,0 +1,20 @@
+import turtle
+
+def draw_C():
+    t = turtle.Turtle()
+    t.speed(2)  # Set the drawing speed
+
+    # Move the turtle to the starting position
+    t.penup()
+    t.goto(0, -100)
+    t.pendown()
+
+    # Draw the letter C
+    t.circle(100, -180)  # Draw a semi-circle with radius 100 and angle -180 degrees
+
+    # Hide the turtle and keep the window open until it's closed by the user
+    t.hideturtle()
+    turtle.done()
+
+# Call the function to draw the letter C
+draw_C()

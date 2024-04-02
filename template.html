@@ -22,7 +22,7 @@
         //1 = lots of friction)
 
         //asteroid
-        const ASTEROID_NUM = 3;
+        const ASTEROID_NUM = 10;
         const ASTEROID_SIZE = 100;//size in px
         const ASTEROID_SPD = 60; //max start speed, px/s
         const ASTEROID_VERT=15; //    NUMBER OF VERTICE ON ASTEROID
@@ -30,8 +30,9 @@
         
         //ship
         const SHIP_SIZE = 30; //height of ship in px
-        const TURN_SPEED = 760; //turn in degrees p second
+        const TURN_SPEED = 1420; //turn in degrees p second
         const SHIP_THRUST = 99; //accelrtn of ship in px/second
+        const SHIP_EXPLODE_TIME = .5;
         var isLargerSize = true;
         const showRedDot = 'false';
         const showBound = 'true'; //show collision bound
@@ -46,6 +47,7 @@
             r: SHIP_SIZE/2,
             a: 90 / (180 * Math.PI), //90 degrees in radians
             rot: 0, //rotation
+            explodeTime: 0 ,
             thrusting: false,
             thrust: { //cont in the direction, even if key releases
                 x:0,
@@ -74,8 +76,8 @@
             var xAst, yAst;
             for (var i = 0; i< ASTEROID_NUM; i++){
                 do {
-                    xAst = Math.floor(Math.random() *canv.width);
-                    yAst = Math.floor(Math.random() *canv.height);
+                    xAst = (Math.floor(Math.random()) * canv.width);
+                    yAst = (Math.floor(Math.random()) * canv.height);
                     const distance = distBtwnPts(ship.x, ship.y, xAst, yAst);
 
                 } while(!isSafeSpawnPosition(xAst, yAst, ((ASTEROID_SIZE*2) + ship.r)))
@@ -87,6 +89,15 @@
             return Math.sqrt(Math.pow(x2-x1, 2) + Math.pow(y2,y1,2));
         }
 
+       /* function explodeShip(){
+            //ship.explodTIme = Math.ceil(SHIP_EXPLODE_TIME *FPS);
+            ctx.fillStyle = 'orange';
+            ctx.strokStyle = 'orange'
+            ctx.beginPath();
+            ctx.arc(ship.x, ship.y, ship.r, 0, Math.PI*2, false);
+            ctx.fill();
+            ctx.stroke();
+        } */
         // Function to check if asteroid spawn position is safe
         function isSafeSpawnPosition(xAst, yAst, minSafeDistance) {
             // Calculate distance between ship and potential asteroid spawn position
@@ -112,7 +123,7 @@
                  
             }
         }
-
+        
         function keyUp(/** @type {KeyboardEvent} */ ev){
             switch(ev.keyCode){
                 case 37: //left arrow(stop rotates ship left)
@@ -132,7 +143,7 @@
         }
 
         function newAsteroid(x,y){ //location of asterid
-            var asteroid ={
+            var asteroid = {
                 x: x,
                 y: y,
                 r: ASTEROID_SIZE/2, //radius
@@ -163,6 +174,7 @@
         }
         
         function update(){
+            var exploding = ship.explodeTime > 0;
             ctx.clearRect(0, 0, canv.width, canv.height);
             //draw space
             
@@ -214,7 +226,8 @@
 
                 
                 isLargerSize = !isLargerSize;
-            } else {
+                } 
+                else {
                 // apply friction (slow the ship down when not thrusting)
                 ship.thrust.x -= FRICTION * ship.thrust.x / FPS;
                 ship.thrust.y -= FRICTION * ship.thrust.y / FPS;
@@ -232,26 +245,41 @@
                 ship.x -= vx;
                 ship.y += vy;
             }
-            
-            // draw the triangular ship
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = SHIP_SIZE / 20;
-            ctx.beginPath();
-            ctx.moveTo( // head of the ship
-                ship.x + 4/3 * ship.r * Math.cos(ship.a),
-                ship.y - 4/3 * ship.r * Math.sin(ship.a)
-            );
-            ctx.lineTo( // rear left
-                ship.x - ship.r * (2/3 * Math.cos(ship.a) + Math.sin(ship.a)),
-                ship.y + ship.r * (2/3 * Math.sin(ship.a) - Math.cos(ship.a))
-            );
-            ctx.lineTo( // rear right
-                ship.x - ship.r * (2/3 * Math.cos(ship.a) - Math.sin(ship.a)),
-                ship.y + ship.r * (2/3 * Math.sin(ship.a) + Math.cos(ship.a))
-            );
-            ctx.closePath();
-            ctx.stroke(); 
-            
+
+            if(!exploding){
+                // draw the triangular ship
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = SHIP_SIZE / 20;
+                ctx.beginPath();
+                ctx.moveTo( // head of the ship
+                    ship.x + 4/3 * ship.r * Math.cos(ship.a),
+                    ship.y - 4/3 * ship.r * Math.sin(ship.a)
+                );
+                ctx.lineTo( // rear left
+                    ship.x - ship.r * (2/3 * Math.cos(ship.a) + Math.sin(ship.a)),
+                    ship.y + ship.r * (2/3 * Math.sin(ship.a) - Math.cos(ship.a))
+                );
+                ctx.lineTo( // rear right
+                    ship.x - ship.r * (2/3 * Math.cos(ship.a) - Math.sin(ship.a)),
+                    ship.y + ship.r * (2/3 * Math.sin(ship.a) + Math.cos(ship.a))
+                );
+                ctx.closePath();
+                ctx.stroke(); 
+            } else {
+                //draw explosion
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(ship.x, ship.y, ship.r*1.5, 0, Math.PI*2, false);
+                ctx.stroke();
+                ctx.strokeStyle = 'orange';
+                ctx.beginPath();
+                ctx.arc(ship.x, ship.y, ship.r*1.2, 0, Math.PI*2, false);
+                ctx.stroke(); 
+                ctx.strokeStyle = 'gold';
+                ctx.beginPath();
+                ctx.arc(ship.x, ship.y, ship.r*.8, 0, Math.PI*2, false);
+                ctx.stroke();  
+            }
             if(showBound =='true'){
                 ctx.strokeStyle = 'yellow';
                 ctx.beginPath();
@@ -294,25 +322,14 @@
                     ctx.arc(x, y, r, 0, Math.PI*2, false);
                     ctx.stroke();
                 }
-
-                //move
-                asteroids[i].x += asteroids[i].xv ;
-                asteroids[i].y += asteroids[i].yv;
-               
-                //edge of screen
-                if (asteroids[i].x < (0-asteroids[i].r)){
-                    asteroids[i].x = canv.width + asteroids[i].r;
-                } else if(asteroids[i].x > canv.width+asteroids[i].r){
-                    asteroids[i].x = 0 -asteroids[i].r; 
-                }
-
-                if (asteroids[i].y < 0-asteroids[i].r){
-                    asteroids[i].y = canv.height +asteroids[i].r;
-                } else if(asteroids[i].y > canv.height+asteroids[i].r){
-                    asteroids[i].y = 0 - asteroids[i].r; 
-                }
             }
             
+            // check collisions
+            for (var i=0; i < asteroids.length; i++){
+                if((distBtwnPts(ship.v, ship.v, asteroids[i].x, asteroids[i].y)) < (ship.r + asteroids[i].r)){
+                    explodeShip();
+                }
+            } 
             //rotate ship
             ship.a += ship.rot;
 
@@ -334,6 +351,25 @@
                 ship.y = canv.height + ship.r;
             } else if (ship.y > canv.height + ship.r) {
                 ship.y = 0 - ship.r;
+            }
+            
+            //move asteroids
+            for (var i=0; i < asteroids.length;i++){
+                asteroids[i].x += asteroids[i].xv ;
+                asteroids[i].y += asteroids[i].yv;
+               
+                //edge of screen
+            if (asteroids[i].x < (0-asteroids[i].r)){
+                    asteroids[i].x = canv.width + asteroids[i].r;
+                } else if(asteroids[i].x > canv.width+asteroids[i].r){
+                    asteroids[i].x = 0 -asteroids[i].r; 
+                }
+
+            if (asteroids[i].y < 0-asteroids[i].r){
+                    asteroids[i].y = canv.height +asteroids[i].r;
+                } else if(asteroids[i].y > canv.height+asteroids[i].r){
+                    asteroids[i].y = 0 - asteroids[i].r; 
+                }
             }
 
             if(showRedDot=='true'){
